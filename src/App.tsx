@@ -6,19 +6,21 @@ import { VoicebotLog } from './components/VoicebotLog';
 import { ConnectButton } from './components/ConnectButton';
 import { recordAudio } from 'vad-web';
 
-const SOCKET_URL = 'http://localhost:8080'; // Change to your backend
-const ROOM_ID = 'fnjnfjnf'; // Example room id
+const SOCKET_URL = 'http://localhost:8080';
+const ROOM_ID = 'fnjnfjnf';
+const TARGET_SAMPLE_RATE = 16000;
+const CHUNK_SIZE = 1024; // Larger chunks for better quality
+const MIN_CHUNK_SIZE = 512; // Minimum chunk size before sending
 
 function App() {
   const [connected, setConnected] = useState(false);
-
-  const [isSpeaking, setIsSpeaking] = useState(false); // Use state for UI updates
-  const speakingRef = useRef(false); // Use ref for worklet handler
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speakingRef = useRef(false);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
-  const vadRef = useRef<null | (() => void)>(null); // dispose function
-  const audioBufferRef = useRef<Int16Array[]>([]); // Buffer to accumulate audio during speech
+  const vadRef = useRef<null | (() => void)>(null);
+  const audioBufferRef = useRef<Int16Array[]>([]);
 
   // WebSocket setup
   const { emit, disconnect, on, off } = useWebSocket({
@@ -26,7 +28,7 @@ function App() {
   });
 
   useEffect(() => {
-    const handleStream = ({ audioBuffer }:{audioBuffer: ArrayBuffer | Int16Array | Int16Array[]}) => {
+    const handleStream = ({ audioBuffer }: { audioBuffer: ArrayBuffer | Int16Array | Int16Array[] }) => {
       let pcm16;
       if (audioBuffer instanceof ArrayBuffer) {
         pcm16 = new Int16Array(audioBuffer);
@@ -38,12 +40,11 @@ function App() {
         console.error('Unknown audioBuffer format', audioBuffer);
         return;
       }
-      playPCM16(pcm16, 16000); // or your actual sample rate
-    
+      playPCM16(pcm16, TARGET_SAMPLE_RATE);
     };
     
     const handleSilence = ({ user }: { user: string }) => {
-      
+      console.log('Received silence from:', user);
     };
     
     on('audio:stream', handleStream);
@@ -55,131 +56,315 @@ function App() {
     };
   }, [on, off]);
 
-  // AudioWorklet processor code as a string
+  // High-quality AudioWorklet processor with better audio processing
   const workletProcessor = `
     class PCM16Processor extends AudioWorkletProcessor {
+      constructor() {
+        super();
+        this.buffer = [];
+        this.bufferSize = 0;
+        this.targetChunkSize = ${CHUNK_SIZE};
+      }
+      
       process(inputs) {
-        const input = inputs[0][0];
-        if (input) {
-          const pcm16 = new Int16Array(input.length);
-          for (let i = 0; i < input.length; i++) {
-            let s = Math.max(-1, Math.min(1, input[i]));
-            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-          }
-          this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
+        const input = inputs[0];
+        if (!input || !input[0] || input[0].length === 0) {
+          return true;
         }
+        
+        const channelData = input[0]; // Mono channel
+        const pcm16 = new Int16Array(channelData.length);
+        
+        // High-quality float32 to int16 conversion with dithering
+        for (let i = 0; i < channelData.length; i++) {
+          let sample = channelData[i];
+          
+          // Apply soft clipping to prevent harsh distortion
+          if (sample > 0.95) sample = 0.95 + 0.05 * Math.tanh((sample - 0.95) * 20);
+          else if (sample < -0.95) sample = -0.95 + 0.05 * Math.tanh((sample + 0.95) * 20);
+          
+          // Add subtle dithering to reduce quantization noise
+          const dither = (Math.random() - 0.5) * (1.0 / 32768.0);
+          sample += dither;
+          
+          // Convert to 16-bit with proper scaling
+          const scaled = sample * 32767;
+          pcm16[i] = Math.max(-32768, Math.min(32767, Math.round(scaled)));
+        }
+        
+        // Buffer audio chunks for consistent chunk sizes
+        this.buffer.push(pcm16);
+        this.bufferSize += pcm16.length;
+        
+        // Send when we have enough data
+        if (this.bufferSize >= this.targetChunkSize) {
+          this.flushBuffer();
+        }
+        
         return true;
+      }
+      
+      flushBuffer() {
+        if (this.buffer.length === 0) return;
+        
+        // Combine all buffered chunks
+        const totalSamples = this.bufferSize;
+        const combinedBuffer = new Int16Array(totalSamples);
+        let offset = 0;
+        
+        for (const chunk of this.buffer) {
+          combinedBuffer.set(chunk, offset);
+          offset += chunk.length;
+        }
+        
+        // Send the combined buffer
+        this.port.postMessage(combinedBuffer.buffer);
+        
+        // Clear buffer
+        this.buffer = [];
+        this.bufferSize = 0;
       }
     }
     registerProcessor('pcm16-processor', PCM16Processor);
   `;
 
-  // Helper function to send accumulated audio buffer
-  const sendAccumulatedAudio = () => {
-    if (audioBufferRef.current.length > 0) {
-      // Concatenate all buffered audio chunks
-      const totalLength = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
-      const combinedBuffer = new Int16Array(totalLength);
-      let offset = 0;
+  // High-quality resampling using linear interpolation
+  const resampleAudio = (inputBuffer: Int16Array, inputSampleRate: number, targetSampleRate: number): Int16Array => {
+    if (inputSampleRate === targetSampleRate) {
+      return inputBuffer;
+    }
+    
+    const ratio = inputSampleRate / targetSampleRate;
+    const outputLength = Math.floor(inputBuffer.length / ratio);
+    const output = new Int16Array(outputLength);
+    
+    for (let i = 0; i < outputLength; i++) {
+      const srcIndex = i * ratio;
+      const srcIndexInt = Math.floor(srcIndex);
+      const srcIndexNext = Math.min(srcIndexInt + 1, inputBuffer.length - 1);
+      const fraction = srcIndex - srcIndexInt;
       
-      audioBufferRef.current.forEach(chunk => {
-        combinedBuffer.set(chunk, offset);
-        offset += chunk.length;
+      // Linear interpolation for better quality
+      const sample1 = inputBuffer[srcIndexInt];
+      const sample2 = inputBuffer[srcIndexNext];
+      output[i] = Math.round(sample1 + (sample2 - sample1) * fraction);
+    }
+    
+    return output;
+  };
+
+  // Send buffered audio chunks for better quality
+  const sendBufferedAudio = () => {
+    if (audioBufferRef.current.length === 0) return;
+    
+    // Combine all buffered chunks
+    const totalLength = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
+    const combinedBuffer = new Int16Array(totalLength);
+    let offset = 0;
+    
+    audioBufferRef.current.forEach(chunk => {
+      combinedBuffer.set(chunk, offset);
+      offset += chunk.length;
+    });
+    
+    emit('audio:send', { 
+      room: ROOM_ID, 
+      audioBuffer: combinedBuffer.buffer 
+    });
+    
+    console.log(`✓ Sent buffered audio: ${combinedBuffer.length} samples`);
+    
+    // Clear buffer
+    audioBufferRef.current = [];
+  };
+
+  useEffect(() => {
+    emit('room:join', { room: ROOM_ID });
+  }, [emit]);
+
+  // Start streaming with high-quality audio settings
+  const startStreaming = async () => {
+    if (connected) return;
+    
+    try {
+      console.log('Starting high-quality audio streaming...');
+      setConnected(true);
+      
+      // Request high-quality audio with optimal settings
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          channelCount: 1, // Mono for voice
+          sampleRate: { ideal: TARGET_SAMPLE_RATE, min: 16000, max: 48000 },
+          sampleSize: 16,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          // Advanced constraints for better quality
+          googEchoCancellation: true,
+          googAutoGainControl: true,
+          googNoiseSuppression: true,
+          googHighpassFilter: true,
+          googTypingNoiseDetection: true,
+          googAudioMirroring: false
+        } 
       });
       
-      emit('audio:send', { room: ROOM_ID, audioBuffer: combinedBuffer.buffer });
-     
+      mediaStreamRef.current = stream;
       
-      // Clear the buffer
-      audioBufferRef.current = [];
-    } else {
-     
+      // Log actual audio track settings
+      const audioTrack = stream.getAudioTracks()[0];
+      const settings = audioTrack.getSettings();
+      console.log('Audio track settings:', settings);
+      
+      // Create AudioContext with optimal settings
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: TARGET_SAMPLE_RATE,
+        latencyHint: 'interactive'
+      });
+      
+      audioContextRef.current = audioContext;
+      console.log('AudioContext sample rate:', audioContext.sampleRate);
+      
+      // Add gain node for volume control if needed
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = 1.0; // Adjust if needed
+      
+      // Create and add worklet
+      const blob = new Blob([workletProcessor], { type: 'application/javascript' });
+      const workletURL = URL.createObjectURL(blob);
+      
+      await audioContext.audioWorklet.addModule(workletURL);
+      
+      const workletNode = new AudioWorkletNode(audioContext, 'pcm16-processor', {
+        numberOfInputs: 1,
+        numberOfOutputs: 0,
+        channelCount: 1,
+        channelCountMode: 'explicit',
+        channelInterpretation: 'speakers'
+      });
+      
+      workletNodeRef.current = workletNode;
+      
+      // Set up VAD with better settings
+      vadRef.current = await recordAudio({
+        onSpeechEnd: () => {
+          console.log('Speech ended (VAD) - sending buffered audio');
+          speakingRef.current = false;
+          setIsSpeaking(false);
+          
+          // Send any buffered audio when speech ends
+          sendBufferedAudio();
+          
+          emit('audio:silence', { room: ROOM_ID });
+        },
+        onSpeechStart: () => {
+          console.log('Speech started (VAD)');
+          speakingRef.current = true;
+          setIsSpeaking(true);
+        },
+      });
+
+      // Handle worklet messages with buffering strategy
+      workletNode.port.onmessage = (event) => {
+        if (event.data) {
+          const pcm16 = new Int16Array(event.data);
+          
+          // Calculate RMS energy for better quality assessment
+          const rms = Math.sqrt(
+            pcm16.reduce((sum, sample) => sum + sample * sample, 0) / pcm16.length
+          ) / 32768;
+          
+          // Only process chunks with reasonable audio content
+          if (rms > 0.001 || speakingRef.current) {
+            // Resample if necessary
+            let processedBuffer = pcm16;
+            if (audioContext.sampleRate !== TARGET_SAMPLE_RATE) {
+              processedBuffer = resampleAudio(pcm16, audioContext.sampleRate, TARGET_SAMPLE_RATE);
+            }
+            
+            if (speakingRef.current) {
+              // During speech: buffer chunks for batch sending
+              audioBufferRef.current.push(processedBuffer);
+              
+              // Send buffer when it gets large enough
+              const totalBufferSize = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
+              if (totalBufferSize >= CHUNK_SIZE * 2) {
+                sendBufferedAudio();
+              }
+            } else {
+              // Outside speech: send immediately but with larger chunks
+              if (processedBuffer.length >= MIN_CHUNK_SIZE) {
+                emit('audio:send', { 
+                  room: ROOM_ID, 
+                  audioBuffer: processedBuffer.buffer 
+                });
+                console.log(`✓ Sent immediate chunk: ${processedBuffer.length} samples, RMS: ${rms.toFixed(6)}`);
+              }
+            }
+          }
+        }
+      };
+      
+      // Connect audio pipeline with gain control
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(gainNode);
+      gainNode.connect(workletNode);
+      
+      // Clean up
+      URL.revokeObjectURL(workletURL);
+      
+      console.log('High-quality audio streaming started successfully');
+      
+    } catch (error) {
+      console.error('Error starting audio streaming:', error);
+      setConnected(false);
     }
   };
 
-  // Alternative: Send chunks immediately during speech
-  const sendChunkImmediately = (pcm16: Int16Array) => {
-    emit('audio:send', { room: ROOM_ID, audioBuffer: pcm16.buffer });
-  };
-
-  useEffect(()=>{
-    emit('room:join', { room: ROOM_ID });
-  },[])
-  // Start streaming audio using AudioWorklet and VAD
-  const startStreaming = async () => {
-    if (connected) return;
-    setConnected(true);
-   
-    
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaStreamRef.current = stream;
-    
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    audioContextRef.current = audioContext;
-    
-    const blob = new Blob([workletProcessor], { type: 'application/javascript' });
-    const url = URL.createObjectURL(blob);
-    await audioContext.audioWorklet.addModule(url);
-    
-    const workletNode = new AudioWorkletNode(audioContext, 'pcm16-processor');
-    workletNodeRef.current = workletNode;
-
-    // VAD is still set up for future use, but we're not using it for sending audio
-    vadRef.current = await recordAudio({
-      onSpeechEnd: () => {
-        speakingRef.current = false;
-        setIsSpeaking(false);
-     
-        emit('audio:silence', { room: ROOM_ID });
-      },
-      onSpeechStart: () => {
-        speakingRef.current = true;
-        setIsSpeaking(true);
- 
-      },
-    });
-
-    // Handle audio worklet messages
-    workletNode.port.onmessage = (event) => {
-      if (event.data) {
-        const pcm16 = new Int16Array(event.data);
-        
-        // Calculate energy level to filter out very quiet audio
-        const energy = Math.sqrt(pcm16.reduce((sum, v) => sum + v * v, 0) / pcm16.length) / 32768;
-        
-        // Send all chunks when mic is on, regardless of VAD
-        if (energy > 0.01) { // Only send if there's some audio energy
-          sendChunkImmediately(pcm16);
-          
-        }
-      }
-    };
-    
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(workletNode);
-    workletNode.connect(audioContext.destination);
-    
-    URL.revokeObjectURL(url); // Clean up blob URL
-  };
-
-  // Stop streaming audio
+  // Stop streaming with proper cleanup
   const stopStreaming = () => {
+    console.log('Stopping audio streaming...');
+    
+    // Send any remaining buffered audio
+    sendBufferedAudio();
+    
     setConnected(false);
     speakingRef.current = false;
     setIsSpeaking(false);
 
+    // Clean up audio worklet
+    if (workletNodeRef.current) {
+      workletNodeRef.current.disconnect();
+      workletNodeRef.current = null;
+    }
     
-    // Send any remaining buffered audio before stopping
-    sendAccumulatedAudio();
+    // Close audio context
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
     
-    workletNodeRef.current?.disconnect();
-    audioContextRef.current?.close();
-    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-    vadRef.current?.(); // Call dispose function
-    disconnect();
+    // Stop media stream
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+      mediaStreamRef.current = null;
+    }
+    
+    // Dispose VAD
+    if (vadRef.current) {
+      vadRef.current();
+      vadRef.current = null;
+    }
     
     // Clear audio buffer
     audioBufferRef.current = [];
+    
+    // Disconnect websocket
+    disconnect();
+    
+    console.log('Audio streaming stopped');
   };
 
   return (
@@ -187,12 +372,22 @@ function App() {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center">
         <MicrophoneStatus connected={connected} />
         <ConnectButton connected={connected} onClick={connected ? stopStreaming : startStreaming} />
-        {/* <VoicebotLog log={log} /> */}
-        <div className="mt-6 text-center text-gray-400 text-xs">
-          Audio chunks sent continuously when mic is on (energy &gt; 0.01).
+        
+        <div className="mt-6 text-center text-gray-400 text-xs space-y-2">
+          <div>
+            🎵 High-quality audio at {TARGET_SAMPLE_RATE}Hz
+          </div>
+          <div>
+            📦 Chunk size: {CHUNK_SIZE} samples
+          </div>
           {isSpeaking && (
-            <div className="mt-2 text-green-600 font-medium">
-              🎤 Speech detected by VAD
+            <div className="text-green-600 font-medium">
+              🎤 Speech detected - buffering audio
+            </div>
+          )}
+          {connected && (
+            <div className="text-blue-600 font-medium">
+              🔗 WebSocket connected
             </div>
           )}
         </div>
