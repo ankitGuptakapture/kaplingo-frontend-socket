@@ -4,7 +4,7 @@ import { PCM16StreamPlayer } from './utils/audio';
 import { MicrophoneStatus } from './components/MicrophoneStatus';
 import { ConnectButton } from './components/ConnectButton';
 
-const SOCKET_URL = 'http://localhost:8080';
+const SOCKET_URL = 'https://kaplingo-backend-socket-uh86.onrender.com';
 const ROOM_ID = 'fnjnfjnf';
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;
