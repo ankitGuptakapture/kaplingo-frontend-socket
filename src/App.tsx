@@ -9,7 +9,7 @@ const ROOM_ID = 'fnjnfjnf';
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;
 const MIN_CHUNK_SIZE = 512;
-const SPEECH_THRESHOLD = 0.01; // RMS threshold for speech detection
+const SPEECH_THRESHOLD = 0.2; // RMS threshold for speech detection - increased to filter background noise
 const SILENCE_DURATION = 500; // ms of silence before sending
 
 function App() {
