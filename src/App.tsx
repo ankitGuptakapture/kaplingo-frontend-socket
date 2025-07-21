@@ -16,6 +16,7 @@ function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [bufferDuration, setBufferDuration] = useState(0);
   const [isRoomJoined, setIsRoomJoined] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("english");
   const speakingRef = useRef(false);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -224,7 +225,7 @@ function App() {
   // emit("audio:silence",{room:ROOM_ID})
   // Start streaming
   const handleRoom = () => {
-    emit("room:join", { room: ROOM_ID });
+    emit("room:join", { room: ROOM_ID, language: selectedLanguage });
     setIsRoomJoined(true);
   };
   const startStreaming = async () => {
@@ -410,12 +411,114 @@ function App() {
                 </p>
               </div>
 
-              {/* Join button */}
+              {/* Language Selection Dropdown */}
+              <div className="w-full space-y-2">
+                <label className="block text-slate-300 text-sm font-medium mb-2">
+                  Select Language
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedLanguage}
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-800/60 backdrop-blur-sm border border-slate-600/50 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 appearance-none cursor-pointer"
+                  >
+                    <option
+                      value=""
+                      disabled
+                      className="bg-slate-800 text-slate-400"
+                    >
+                      🌐 Choose your language...
+                    </option>
+                    <option value="english" className="bg-slate-800 text-white">
+                      🇺🇸 English
+                    </option>
+                    <option value="spanish" className="bg-slate-800 text-white">
+                      🇪🇸 Spanish
+                    </option>
+                    <option value="french" className="bg-slate-800 text-white">
+                      🇫🇷 French
+                    </option>
+                    <option value="german" className="bg-slate-800 text-white">
+                      🇩🇪 German
+                    </option>
+                    <option value="hindi" className="bg-slate-800 text-white">
+                      🇮🇳 Hindi
+                    </option>
+                    <option value="russian" className="bg-slate-800 text-white">
+                      🇷🇺 Russian
+                    </option>
+                    <option
+                      value="portuguese"
+                      className="bg-slate-800 text-white"
+                    >
+                      🇵🇹 Portuguese
+                    </option>
+                    <option
+                      value="japanese"
+                      className="bg-slate-800 text-white"
+                    >
+                      🇯🇵 Japanese
+                    </option>
+                    <option value="italian" className="bg-slate-800 text-white">
+                      🇮🇹 Italian
+                    </option>
+                    <option value="dutch" className="bg-slate-800 text-white">
+                      🇳🇱 Dutch
+                    </option>
+                  </select>
+                  {/* Custom dropdown arrow */}
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                    <svg
+                      className="w-4 h-4 text-slate-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                {/* Selected language display */}
+                {selectedLanguage && (
+                  <div className="text-xs text-cyan-400 mt-1 flex items-center space-x-1">
+                    <svg
+                      className="w-3 h-3"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>
+                      Language selected:{" "}
+                      {selectedLanguage.charAt(0).toUpperCase() +
+                        selectedLanguage.slice(1)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Join button - disabled until language is selected */}
               <button
                 onClick={handleRoom}
-                className="group relative w-full px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-semibold text-white shadow-2xl shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-500 transform hover:scale-105"
+                disabled={!selectedLanguage}
+                className={`group relative w-full px-8 py-4 rounded-xl font-semibold text-white shadow-2xl transition-all duration-500 transform ${
+                  selectedLanguage
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 cursor-pointer"
+                    : "bg-slate-700 shadow-slate-700/25 cursor-not-allowed opacity-50"
+                }`}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                {selectedLanguage && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                )}
                 <span className="relative flex items-center justify-center space-x-2">
                   <svg
                     className="w-5 h-5"
@@ -430,7 +533,11 @@ function App() {
                       d="M13 10V3L4 14h7v7l9-11h-7z"
                     />
                   </svg>
-                  <span>Initialize Neural Link</span>
+                  <span>
+                    {selectedLanguage
+                      ? "Initialize Neural Link"
+                      : "Select Language First"}
+                  </span>
                 </span>
               </button>
             </div>
