@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useWebSocket } from './webSocket/useWebSocket';
-import { playPCM16 } from './utils/audio';
+import { PCM16StreamPlayer, playPCM16 } from './utils/audio';
 import { MicrophoneStatus } from './components/MicrophoneStatus';
 import { ConnectButton } from './components/ConnectButton';
 
@@ -16,7 +16,7 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [bufferDuration, setBufferDuration] = useState(0);
-  
+
   const speakingRef = useRef(false);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -26,21 +26,41 @@ function App() {
   const bufferSizeRef = useRef(0);
   const lastSpeechTimeRef = useRef<number | null>(null);
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const playerRef = useRef<PCM16StreamPlayer | null>(null);
 
   const { emit, disconnect, on, off } = useWebSocket({
     url: SOCKET_URL,
   });
 
   useEffect(() => {
+    if (!playerRef.current) {
+      playerRef.current = new PCM16StreamPlayer(16000);
+    }
+
+    const handleStreamStart = () => {
+      playerRef.current?.start();
+    };
+
     const handleStream = ({ audioBuffer }: { audioBuffer: ArrayBuffer }) => {
       const pcm16 = new Int16Array(audioBuffer);
-      playPCM16(pcm16, TARGET_SAMPLE_RATE);
+      playerRef.current?.playChunk(pcm16);
     };
-    
+
+    const handleStreamStop = () => {
+      playerRef.current?.stop();
+    };
+
+
+    on('audio:stream:start', handleStreamStart);
     on('audio:stream', handleStream);
-    
+    on('audio:stream:stop', handleStreamStop);
+
+  
     return () => {
+      off('audio:stream:start', handleStreamStart);
       off('audio:stream', handleStream);
+      off('audio:stream:stop', handleStreamStop);
+      playerRef.current?.stop();
     };
   }, [on, off]);
 
@@ -128,30 +148,44 @@ function App() {
   // Send collected audio when speech ends
   const sendBufferedAudio = () => {
     if (audioBufferRef.current.length === 0) return;
-    
+
     const totalLength = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
     if (totalLength === 0) return;
-    
+
     const combinedBuffer = new Int16Array(totalLength);
     let offset = 0;
-    
+
     audioBufferRef.current.forEach(chunk => {
       combinedBuffer.set(chunk, offset);
       offset += chunk.length;
     });
-    
-    emit('audio:send', { 
-      room: ROOM_ID, 
-      audioBuffer: combinedBuffer.buffer 
+
+    emit('audio:send', {
+      room: ROOM_ID,
+      audioBuffer: combinedBuffer.buffer
     });
-    
-    console.log(`✓ Sent buffered audio: ${combinedBuffer.length} samples`);
-    
-    // Reset buffer
+
+   
+
+
     audioBufferRef.current = [];
     bufferSizeRef.current = 0;
     bufferStartTimeRef.current = null;
     setBufferDuration(0);
+  };
+
+  // Function to handle silence detection
+  const handleSilence = () => {
+    if (speakingRef.current) {
+      sendBufferedAudio();
+      emit('audio:silence', { room: ROOM_ID });
+      speakingRef.current = false;
+      setIsSpeaking(false);
+    }
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
   };
 
   // Handle speech detection and buffering
@@ -160,21 +194,21 @@ function App() {
     const isSpeech = checkIfSpeaking(rms);
     const now = Date.now();
     
-    // Handle speech detection
+    // If speech is detected
     if (isSpeech) {
       lastSpeechTimeRef.current = now;
+      
+      // Clear any pending silence timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
       
       if (!speakingRef.current) {
         // Speech just started
         speakingRef.current = true;
         setIsSpeaking(true);
         bufferStartTimeRef.current = now;
-        
-        // Clear any existing silence timeout
-        if (silenceTimeoutRef.current) {
-          clearTimeout(silenceTimeoutRef.current);
-          silenceTimeoutRef.current = null;
-        }
       }
     }
     
@@ -182,63 +216,50 @@ function App() {
     if (speakingRef.current) {
       audioBufferRef.current.push(pcm16);
       bufferSizeRef.current += pcm16.length;
-      
-      // Update buffer duration
       if (bufferStartTimeRef.current) {
         setBufferDuration((now - bufferStartTimeRef.current) / 1000);
       }
     }
     
-    // Handle silence detection
-    if (speakingRef.current && !isSpeech && lastSpeechTimeRef.current) {
-      const timeSinceLastSpeech = now - lastSpeechTimeRef.current;
-      
-      // Set timeout to end speech if silence continues
+    // If we were speaking but are now silent, start a timeout
+    if (speakingRef.current && !isSpeech) {
       if (!silenceTimeoutRef.current) {
-        silenceTimeoutRef.current = setTimeout(() => {
-          if (speakingRef.current) {
-            console.log('Speech ended - sending buffered audio');
-            speakingRef.current = false;
-            setIsSpeaking(false);
-            sendBufferedAudio();
-          }
-          silenceTimeoutRef.current = null;
-        }, SILENCE_DURATION);
+        silenceTimeoutRef.current = setTimeout(handleSilence, SILENCE_DURATION);
       }
     }
   };
-
+  // emit("audio:silence",{room:ROOM_ID})
   // Start streaming
   const startStreaming = async () => {
     if (connected) return;
-    
+
     try {
       setConnected(true);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
           sampleRate: { ideal: TARGET_SAMPLE_RATE },
           noiseSuppression: true,
           echoCancellation: true,
           autoGainControl: true,
-        } 
+        }
       });
-      
+
       mediaStreamRef.current = stream;
-      
+
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: TARGET_SAMPLE_RATE,
         latencyHint: 'interactive'
       });
-      
+
       audioContextRef.current = audioContext;
-      
+
       const blob = new Blob([workletProcessor], { type: 'application/javascript' });
       const workletURL = URL.createObjectURL(blob);
-      
+
       await audioContext.audioWorklet.addModule(workletURL);
-      
+
       const workletNode = new AudioWorkletNode(audioContext, 'pcm16-processor', {
         numberOfInputs: 1,
         numberOfOutputs: 0,
@@ -246,22 +267,22 @@ function App() {
         channelCountMode: 'explicit',
         channelInterpretation: 'speakers'
       });
-      
+
       workletNodeRef.current = workletNode;
-      
+
       // Handle audio chunks with RMS values
       workletNode.port.onmessage = (event) => {
         if (event.data && event.data.audioData) {
           handleAudioChunk(event.data.audioData, event.data.rms);
         }
       };
-      
+
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(workletNode);
-      
+
       URL.revokeObjectURL(workletURL);
       console.log('Audio streaming started with manual speech detection');
-      
+
     } catch (error) {
       console.error('Error starting audio streaming:', error);
       setConnected(false);
@@ -275,12 +296,12 @@ function App() {
       clearTimeout(silenceTimeoutRef.current);
       silenceTimeoutRef.current = null;
     }
-    
+
     // Send any remaining buffered audio
     if (speakingRef.current) {
       sendBufferedAudio();
     }
-    
+
     setConnected(false);
     setIsSpeaking(false);
     speakingRef.current = false;
@@ -289,24 +310,24 @@ function App() {
       workletNodeRef.current.disconnect();
       workletNodeRef.current = null;
     }
-    
+
     if (audioContextRef.current?.state !== 'closed') {
       audioContextRef.current?.close();
       audioContextRef.current = null;
     }
-    
+
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = null;
     }
-    
+
     // Reset all buffer references
     audioBufferRef.current = [];
     bufferSizeRef.current = 0;
     bufferStartTimeRef.current = null;
     lastSpeechTimeRef.current = null;
     setBufferDuration(0);
-    
+
     disconnect();
   };
 
@@ -314,12 +335,12 @@ function App() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center">
         <MicrophoneStatus connected={connected} />
-        <ConnectButton connected={connected} onClick={connected ? stopStreaming : startStreaming} />
-        
+        <ConnectButton isRoomJoined={true} connected={connected} onClick={connected ? stopStreaming : startStreaming} />
+
         <div className="mt-6 text-center text-gray-400 text-xs space-y-2">
           <div>🎵 Audio at {TARGET_SAMPLE_RATE}Hz</div>
           <div>📦 Chunk size: {CHUNK_SIZE} samples</div>
-          
+
           {isSpeaking && (
             <div className="mt-4 space-y-2">
               <div className="text-green-600 font-medium animate-pulse">
@@ -330,7 +351,7 @@ function App() {
               </div>
             </div>
           )}
-          
+
           {connected && !isSpeaking && (
             <div className="text-blue-600 font-medium">
               🔗 Ready - waiting for speech

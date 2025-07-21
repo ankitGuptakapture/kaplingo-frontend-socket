@@ -3,18 +3,25 @@ import { webSocketService, type EventCallback } from './index';
 
 interface UseWebSocketOptions {
   url: string;
-  options?: Record<string, any>;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
   events?: Record<string, EventCallback>;
 }
 
-
-export function useWebSocket({ url, options, events }: UseWebSocketOptions) {
- 
+export function useWebSocket({ url, onConnect, onDisconnect, events }: UseWebSocketOptions) {
   const eventsRef = useRef(events);
   eventsRef.current = events;
 
   useEffect(() => {
-    webSocketService.connect(url, options);
+    webSocketService.connect(url);
+
+    webSocketService.on('connect', () => {
+      onConnect?.();
+    });
+
+    webSocketService.on('disconnect', () => {
+      onDisconnect?.();
+    });
 
     if (eventsRef.current) {
       Object.entries(eventsRef.current).forEach(([event, callback]) => {
@@ -22,15 +29,17 @@ export function useWebSocket({ url, options, events }: UseWebSocketOptions) {
       });
     }
 
-    // Cleanup on unmount
     return () => {
       if (eventsRef.current) {
         Object.entries(eventsRef.current).forEach(([event, callback]) => {
           webSocketService.off(event, callback);
         });
       }
+      webSocketService.off('connect');
+      webSocketService.off('disconnect');
     };
-  }, [url, JSON.stringify(options), JSON.stringify(events)]);
+  }, [url, onConnect, onDisconnect]);
+
   return {
     emit: webSocketService.emit.bind(webSocketService),
     disconnect: webSocketService.disconnect.bind(webSocketService),
