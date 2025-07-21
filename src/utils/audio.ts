@@ -20,6 +20,7 @@ export class PCM16StreamPlayer {
   private isPlaying: boolean = false;
   private sampleRate: number;
   private chunkQueue: Int16Array[] = [];
+  private isProcessing: boolean = false;
 
   constructor(sampleRate: number = 16000) {
     this.sampleRate = sampleRate;
@@ -42,6 +43,7 @@ export class PCM16StreamPlayer {
 
     this.isPlaying = true;
     this.chunkQueue = []; // Clear any existing queue
+    this.isProcessing = false;
     // Set the start time for the very first chunk.
     this.nextStartTime = this.audioCtx.currentTime;
     console.log("Audio stream playback started.");
@@ -51,6 +53,7 @@ export class PCM16StreamPlayer {
   public stop() {
     this.isPlaying = false;
     this.chunkQueue = []; // Clear the queue
+    this.isProcessing = false;
     console.log("Audio stream playback stopped.");
   }
 
@@ -61,21 +64,33 @@ export class PCM16StreamPlayer {
     // Add chunk to queue
     this.chunkQueue.push(pcm16);
     
-    // Process all chunks in queue immediately
-    this.processQueue();
-  }
-
-  private processQueue() {
-    if (!this.isPlaying || !this.audioCtx) return;
-
-    // Process all chunks currently in queue
-    while (this.chunkQueue.length > 0) {
-      const pcm16 = this.chunkQueue.shift()!;
-      this.scheduleChunk(pcm16);
+    // Process queue if not already processing
+    if (!this.isProcessing) {
+      this.processQueue();
     }
   }
 
-  private scheduleChunk(pcm16: Int16Array) {
+  private processQueue() {
+    if (!this.isPlaying || !this.audioCtx || this.isProcessing) return;
+
+    this.isProcessing = true;
+
+    // Process only one chunk at a time
+    if (this.chunkQueue.length > 0) {
+      const pcm16 = this.chunkQueue.shift()!;
+      this.scheduleChunk(pcm16);
+    }
+
+    this.isProcessing = false;
+
+    // Schedule next chunk processing if queue has more items
+    if (this.chunkQueue.length > 0 && this.isPlaying) {
+      // Use a small delay to prevent overwhelming the audio context
+      setTimeout(() => this.processQueue(), 10);
+    }
+  }
+
+  private scheduleChunk(pcm16: Int16Array): void {
     if (!this.audioCtx) return;
 
     // 1. Create an AudioBuffer from the raw PCM data.
@@ -98,11 +113,15 @@ export class PCM16StreamPlayer {
     source.connect(this.audioCtx.destination);
 
     // 4. Schedule the chunk to play at the correct time in sequence
-    const scheduledTime = Math.max(this.nextStartTime, this.audioCtx.currentTime);
+    const currentTime = this.audioCtx.currentTime;
+    const scheduledTime = Math.max(this.nextStartTime, currentTime + 0.01);
+    
     source.start(scheduledTime);
 
     // 5. Calculate the start time for the *next* chunk.
     this.nextStartTime = scheduledTime + buffer.duration;
+
+    console.log(`Scheduled chunk at ${scheduledTime.toFixed(3)}s, next at ${this.nextStartTime.toFixed(3)}s`);
   }
 
   // Optional: Get current queue length for debugging
@@ -113,5 +132,6 @@ export class PCM16StreamPlayer {
   // Optional: Clear the queue manually
   public clearQueue() {
     this.chunkQueue = [];
+    this.isProcessing = false;
   }
 }
