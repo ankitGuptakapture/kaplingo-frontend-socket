@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useWebSocket } from './webSocket/useWebSocket';
-import { PCM16StreamPlayer, playPCM16 } from './utils/audio';
+import { PCM16StreamPlayer } from './utils/audio';
 import { MicrophoneStatus } from './components/MicrophoneStatus';
 import { ConnectButton } from './components/ConnectButton';
 
@@ -16,6 +16,9 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [bufferDuration, setBufferDuration] = useState(0);
+  const [isRoomJoined, setIsRoomJoined] = useState(false);
+
+
 
   const speakingRef = useRef(false);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -64,9 +67,6 @@ function App() {
     };
   }, [on, off]);
 
-  useEffect(() => {
-    emit('room:join', { room: ROOM_ID });
-  }, []);
 
   // Audio processing worklet
   const workletProcessor = `
@@ -230,6 +230,10 @@ function App() {
   };
   // emit("audio:silence",{room:ROOM_ID})
   // Start streaming
+  const handleRoom = () => {
+    emit('room:join', { room: ROOM_ID });
+    setIsRoomJoined(true)
+  }
   const startStreaming = async () => {
     if (connected) return;
 
@@ -333,9 +337,11 @@ function App() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center">
+      <div className="w-full max-w-md mb-3  bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center">
+
+      <button className=' py-4 rounded-xl  mb-3.5 bg-blue-500 text-white w-full ' onClick={handleRoom}>Join Room</button>
         <MicrophoneStatus connected={connected} />
-        <ConnectButton isRoomJoined={true} connected={connected} onClick={connected ? stopStreaming : startStreaming} />
+        <ConnectButton isRoomJoined={isRoomJoined} connected={connected} onClick={connected ? stopStreaming : startStreaming} />
 
         <div className="mt-6 text-center text-gray-400 text-xs space-y-2">
           <div>🎵 Audio at {TARGET_SAMPLE_RATE}Hz</div>

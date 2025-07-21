@@ -5,7 +5,7 @@ interface ConnectButtonProps {
 }
 
 export function ConnectButton({ connected, isRoomJoined, onClick }: ConnectButtonProps) {
-  const buttonText = connected ? 'Disconnect' : (isRoomJoined ? 'Start Streaming' : 'Joining...');
+  const buttonText = connected ? 'Disconnect' : (isRoomJoined ? 'Start Streaming' : 'Joining Room first');
 
   return (
     <button
