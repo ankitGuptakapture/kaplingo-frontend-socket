@@ -14,12 +14,12 @@ export function playPCM16(pcm16: Int16Array, sampleRate = 44100) {
 } 
 
 
-// Manages seamless playback of raw PCM-16 audio streams.
 export class PCM16StreamPlayer {
   private audioCtx: AudioContext | null = null;
   private nextStartTime: number = 0;
   private isPlaying: boolean = false;
   private sampleRate: number;
+  private chunkQueue: Int16Array[] = [];
 
   constructor(sampleRate: number = 16000) {
     this.sampleRate = sampleRate;
@@ -41,6 +41,7 @@ export class PCM16StreamPlayer {
     if (this.isPlaying || !this.audioCtx) return;
 
     this.isPlaying = true;
+    this.chunkQueue = []; // Clear any existing queue
     // Set the start time for the very first chunk.
     this.nextStartTime = this.audioCtx.currentTime;
     console.log("Audio stream playback started.");
@@ -49,12 +50,33 @@ export class PCM16StreamPlayer {
   // Call this when you receive the 'audio:stream:stop' event.
   public stop() {
     this.isPlaying = false;
+    this.chunkQueue = []; // Clear the queue
     console.log("Audio stream playback stopped.");
   }
 
   // Processes and schedules each incoming audio chunk for playback.
   public playChunk(pcm16: Int16Array) {
     if (!this.isPlaying || !this.audioCtx) return;
+
+    // Add chunk to queue
+    this.chunkQueue.push(pcm16);
+    
+    // Process all chunks in queue immediately
+    this.processQueue();
+  }
+
+  private processQueue() {
+    if (!this.isPlaying || !this.audioCtx) return;
+
+    // Process all chunks currently in queue
+    while (this.chunkQueue.length > 0) {
+      const pcm16 = this.chunkQueue.shift()!;
+      this.scheduleChunk(pcm16);
+    }
+  }
+
+  private scheduleChunk(pcm16: Int16Array) {
+    if (!this.audioCtx) return;
 
     // 1. Create an AudioBuffer from the raw PCM data.
     const buffer = this.audioCtx.createBuffer(
@@ -75,12 +97,21 @@ export class PCM16StreamPlayer {
     source.buffer = buffer;
     source.connect(this.audioCtx.destination);
 
-    // 4. Schedule the chunk to play.
-    // If nextStartTime is in the past, it will start immediately.
+    // 4. Schedule the chunk to play at the correct time in sequence
     const scheduledTime = Math.max(this.nextStartTime, this.audioCtx.currentTime);
     source.start(scheduledTime);
 
     // 5. Calculate the start time for the *next* chunk.
     this.nextStartTime = scheduledTime + buffer.duration;
+  }
+
+  // Optional: Get current queue length for debugging
+  public getQueueLength(): number {
+    return this.chunkQueue.length;
+  }
+
+  // Optional: Clear the queue manually
+  public clearQueue() {
+    this.chunkQueue = [];
   }
 }
