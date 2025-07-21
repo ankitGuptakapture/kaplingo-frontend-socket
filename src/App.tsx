@@ -5,10 +5,10 @@ import { MicrophoneStatus } from "./components/MicrophoneStatus";
 import { ConnectButton } from "./components/ConnectButton";
 import { v4 as uuidv4 } from "uuid";
 
-const userId = uuidv4();
+export const userId = uuidv4();
 
 const SOCKET_URL = "https://kaplingo-backend-socket-uh86.onrender.com";
-const ROOM_ID = "fnjnfjnf";
+export const ROOM_ID = "fnjnfjnf";
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;
 const SPEECH_THRESHOLD = 0.01; // RMS threshold for speech detection
@@ -34,6 +34,7 @@ function App() {
   const { emit, disconnect, on, off } = useWebSocket({
     url: SOCKET_URL,
   });
+
 
   useEffect(() => {
     if (!playerRef.current) {
@@ -64,6 +65,12 @@ function App() {
       playerRef.current?.stop();
     };
   }, [on, off]);
+
+  useEffect(() => {
+    window.addEventListener('beforeunload', () => {
+      window.navigator.sendBeacon(`${SOCKET_URL}/api/user-left`, JSON.stringify({ room: ROOM_ID, user: userId }));
+    });
+  }, [])
 
   // Audio processing worklet
   const workletProcessor = `
@@ -228,7 +235,7 @@ function App() {
   // emit("audio:silence",{room:ROOM_ID})
   // Start streaming
   const handleRoom = () => {
-    emit("room:join", { room: ROOM_ID, lang: selectedLanguage, user:userId });
+    emit("room:join", { room: ROOM_ID, lang: selectedLanguage, user: userId });
     setIsRoomJoined(true);
   };
   const startStreaming = async () => {
@@ -356,9 +363,8 @@ function App() {
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                animation: `float ${
-                  3 + Math.random() * 4
-                }s ease-in-out infinite`,
+                animation: `float ${3 + Math.random() * 4
+                  }s ease-in-out infinite`,
                 animationDelay: `${Math.random() * 2}s`,
               }}
             />
@@ -513,11 +519,10 @@ function App() {
               <button
                 onClick={handleRoom}
                 disabled={!selectedLanguage}
-                className={`group relative w-full px-8 py-4 rounded-xl font-semibold text-white shadow-2xl transition-all duration-500 transform ${
-                  selectedLanguage
+                className={`group relative w-full px-8 py-4 rounded-xl font-semibold text-white shadow-2xl transition-all duration-500 transform ${selectedLanguage
                     ? "bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 cursor-pointer"
                     : "bg-slate-700 shadow-slate-700/25 cursor-not-allowed opacity-50"
-                }`}
+                  }`}
               >
                 {selectedLanguage && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -575,13 +580,12 @@ function App() {
         {[...Array(40)].map((_, i) => (
           <div
             key={i}
-            className={`absolute rounded-full ${
-              i % 3 === 0
+            className={`absolute rounded-full ${i % 3 === 0
                 ? "bg-cyan-400"
                 : i % 3 === 1
-                ? "bg-blue-400"
-                : "bg-purple-400"
-            }`}
+                  ? "bg-blue-400"
+                  : "bg-purple-400"
+              }`}
             style={{
               width: `${1 + Math.random() * 2}px`,
               height: `${1 + Math.random() * 2}px`,
@@ -637,25 +641,23 @@ function App() {
                       4 + Math.sin(i * 0.4) * 8 + Math.cos(i * 0.2) * 6;
                     const animatedHeight = isSpeaking
                       ? 4 +
-                        Math.sin(i * 0.3 + Date.now() * 0.01) * 15 +
-                        Math.random() * 12
+                      Math.sin(i * 0.3 + Date.now() * 0.01) * 15 +
+                      Math.random() * 12
                       : staticHeight;
 
                     return (
                       <div
                         key={i}
-                        className={`rounded-full transition-all duration-300 ${
-                          isSpeaking
+                        className={`rounded-full transition-all duration-300 ${isSpeaking
                             ? "bg-gradient-to-t from-cyan-500 via-blue-400 to-purple-400 opacity-80"
                             : "bg-gradient-to-t from-slate-600 to-slate-500 opacity-60"
-                        }`}
+                          }`}
                         style={{
                           width: "2px",
                           height: `${Math.max(4, animatedHeight)}px`,
                           animation: isSpeaking
-                            ? `wave ${
-                                0.4 + Math.random() * 0.3
-                              }s ease-in-out infinite`
+                            ? `wave ${0.4 + Math.random() * 0.3
+                            }s ease-in-out infinite`
                             : "none",
                           animationDelay: `${i * 0.02}s`,
                         }}
