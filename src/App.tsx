@@ -1,11 +1,11 @@
-import { useRef, useState, useEffect } from 'react';
-import { useWebSocket } from './webSocket/useWebSocket';
-import { PCM16StreamPlayer, playPCM16 } from './utils/audio';
-import { MicrophoneStatus } from './components/MicrophoneStatus';
-import { ConnectButton } from './components/ConnectButton';
+import { useRef, useState, useEffect } from "react";
+import { useWebSocket } from "./webSocket/useWebSocket";
+import { PCM16StreamPlayer, playPCM16 } from "./utils/audio";
+import { MicrophoneStatus } from "./components/MicrophoneStatus";
+import { ConnectButton } from "./components/ConnectButton";
 
-const SOCKET_URL = 'http://localhost:8080';
-const ROOM_ID = 'fnjnfjnf';
+const SOCKET_URL = "https://kaplingo-backend-socket-uh86.onrender.com/";
+const ROOM_ID = "fnjnfjnf";
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;
 const MIN_CHUNK_SIZE = 512;
@@ -50,22 +50,20 @@ function App() {
       playerRef.current?.stop();
     };
 
+    on("audio:stream:start", handleStreamStart);
+    on("audio:stream", handleStream);
+    on("audio:stream:stop", handleStreamStop);
 
-    on('audio:stream:start', handleStreamStart);
-    on('audio:stream', handleStream);
-    on('audio:stream:stop', handleStreamStop);
-
-  
     return () => {
-      off('audio:stream:start', handleStreamStart);
-      off('audio:stream', handleStream);
-      off('audio:stream:stop', handleStreamStop);
+      off("audio:stream:start", handleStreamStart);
+      off("audio:stream", handleStream);
+      off("audio:stream:stop", handleStreamStop);
       playerRef.current?.stop();
     };
   }, [on, off]);
 
   useEffect(() => {
-    emit('room:join', { room: ROOM_ID });
+    emit("room:join", { room: ROOM_ID });
   }, []);
 
   // Audio processing worklet
@@ -149,24 +147,24 @@ function App() {
   const sendBufferedAudio = () => {
     if (audioBufferRef.current.length === 0) return;
 
-    const totalLength = audioBufferRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
+    const totalLength = audioBufferRef.current.reduce(
+      (sum, chunk) => sum + chunk.length,
+      0
+    );
     if (totalLength === 0) return;
 
     const combinedBuffer = new Int16Array(totalLength);
     let offset = 0;
 
-    audioBufferRef.current.forEach(chunk => {
+    audioBufferRef.current.forEach((chunk) => {
       combinedBuffer.set(chunk, offset);
       offset += chunk.length;
     });
 
-    emit('audio:send', {
+    emit("audio:send", {
       room: ROOM_ID,
-      audioBuffer: combinedBuffer.buffer
+      audioBuffer: combinedBuffer.buffer,
     });
-
-   
-
 
     audioBufferRef.current = [];
     bufferSizeRef.current = 0;
@@ -178,7 +176,7 @@ function App() {
   const handleSilence = () => {
     if (speakingRef.current) {
       sendBufferedAudio();
-      emit('audio:silence', { room: ROOM_ID });
+      emit("audio:silence", { room: ROOM_ID });
       speakingRef.current = false;
       setIsSpeaking(false);
     }
@@ -193,17 +191,17 @@ function App() {
     const pcm16 = new Int16Array(audioData);
     const isSpeech = checkIfSpeaking(rms);
     const now = Date.now();
-    
+
     // If speech is detected
     if (isSpeech) {
       lastSpeechTimeRef.current = now;
-      
+
       // Clear any pending silence timeout
       if (silenceTimeoutRef.current) {
         clearTimeout(silenceTimeoutRef.current);
         silenceTimeoutRef.current = null;
       }
-      
+
       if (!speakingRef.current) {
         // Speech just started
         speakingRef.current = true;
@@ -211,7 +209,7 @@ function App() {
         bufferStartTimeRef.current = now;
       }
     }
-    
+
     // Buffer audio if we're in a speech segment
     if (speakingRef.current) {
       audioBufferRef.current.push(pcm16);
@@ -220,7 +218,7 @@ function App() {
         setBufferDuration((now - bufferStartTimeRef.current) / 1000);
       }
     }
-    
+
     // If we were speaking but are now silent, start a timeout
     if (speakingRef.current && !isSpeech) {
       if (!silenceTimeoutRef.current) {
@@ -243,30 +241,37 @@ function App() {
           noiseSuppression: true,
           echoCancellation: true,
           autoGainControl: true,
-        }
+        },
       });
 
       mediaStreamRef.current = stream;
 
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+      const audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)({
         sampleRate: TARGET_SAMPLE_RATE,
-        latencyHint: 'interactive'
+        latencyHint: "interactive",
       });
 
       audioContextRef.current = audioContext;
 
-      const blob = new Blob([workletProcessor], { type: 'application/javascript' });
+      const blob = new Blob([workletProcessor], {
+        type: "application/javascript",
+      });
       const workletURL = URL.createObjectURL(blob);
 
       await audioContext.audioWorklet.addModule(workletURL);
 
-      const workletNode = new AudioWorkletNode(audioContext, 'pcm16-processor', {
-        numberOfInputs: 1,
-        numberOfOutputs: 0,
-        channelCount: 1,
-        channelCountMode: 'explicit',
-        channelInterpretation: 'speakers'
-      });
+      const workletNode = new AudioWorkletNode(
+        audioContext,
+        "pcm16-processor",
+        {
+          numberOfInputs: 1,
+          numberOfOutputs: 0,
+          channelCount: 1,
+          channelCountMode: "explicit",
+          channelInterpretation: "speakers",
+        }
+      );
 
       workletNodeRef.current = workletNode;
 
@@ -281,10 +286,9 @@ function App() {
       source.connect(workletNode);
 
       URL.revokeObjectURL(workletURL);
-      console.log('Audio streaming started with manual speech detection');
-
+      console.log("Audio streaming started with manual speech detection");
     } catch (error) {
-      console.error('Error starting audio streaming:', error);
+      console.error("Error starting audio streaming:", error);
       setConnected(false);
     }
   };
@@ -311,13 +315,13 @@ function App() {
       workletNodeRef.current = null;
     }
 
-    if (audioContextRef.current?.state !== 'closed') {
+    if (audioContextRef.current?.state !== "closed") {
       audioContextRef.current?.close();
       audioContextRef.current = null;
     }
 
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
 
@@ -335,7 +339,11 @@ function App() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center">
         <MicrophoneStatus connected={connected} />
-        <ConnectButton isRoomJoined={true} connected={connected} onClick={connected ? stopStreaming : startStreaming} />
+        <ConnectButton
+          isRoomJoined={true}
+          connected={connected}
+          onClick={connected ? stopStreaming : startStreaming}
+        />
 
         <div className="mt-6 text-center text-gray-400 text-xs space-y-2">
           <div>🎵 Audio at {TARGET_SAMPLE_RATE}Hz</div>
