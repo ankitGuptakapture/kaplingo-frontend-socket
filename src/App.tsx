@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const userId = uuidv4();
 
-const SOCKET_URL = "http://kaplingo-backend-socket-uh86.onrender.com";
+const SOCKET_URL = "https://kaplingo-backend-socket-uh86.onrender.com";
 const ROOM_ID = "fnjnfjnf";
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;
