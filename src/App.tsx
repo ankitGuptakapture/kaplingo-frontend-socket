@@ -3,6 +3,9 @@ import { useWebSocket } from "./webSocket/useWebSocket";
 import { PCM16StreamPlayer } from "./utils/audio";
 import { MicrophoneStatus } from "./components/MicrophoneStatus";
 import { ConnectButton } from "./components/ConnectButton";
+import { v4 as uuidv4 } from "uuid";
+
+const userId = uuidv4();
 
 const SOCKET_URL = "http://localhost:8080";
 const ROOM_ID = "fnjnfjnf";
@@ -225,7 +228,7 @@ function App() {
   // emit("audio:silence",{room:ROOM_ID})
   // Start streaming
   const handleRoom = () => {
-    emit("room:join", { room: ROOM_ID, language: selectedLanguage });
+    emit("room:join", { room: ROOM_ID, language: selectedLanguage, userId });
     setIsRoomJoined(true);
   };
   const startStreaming = async () => {
