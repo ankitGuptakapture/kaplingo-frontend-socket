@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useWebSocket } from "./webSocket/useWebSocket";
-import { PCM16StreamPlayer, playPCM16 } from "./utils/audio";
+import { PCM16StreamPlayer } from "./utils/audio";
 import { MicrophoneStatus } from "./components/MicrophoneStatus";
 import { ConnectButton } from "./components/ConnectButton";
 
@@ -8,7 +8,7 @@ const SOCKET_URL = "https://kaplingo-backend-socket-uh86.onrender.com/";
 const ROOM_ID = "fnjnfjnf";
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;
-const MIN_CHUNK_SIZE = 512;
+// const MIN_CHUNK_SIZE = 512;
 const SPEECH_THRESHOLD = 0.01; // RMS threshold for speech detection
 const SILENCE_DURATION = 500; // ms of silence before sending
 
