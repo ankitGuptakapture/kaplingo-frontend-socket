@@ -174,6 +174,7 @@ function App() {
     emit("audio:send", {
       room: ROOM_ID,
       audioBuffer: combinedBuffer.buffer,
+      user: userId,
     });
 
     audioBufferRef.current = [];
