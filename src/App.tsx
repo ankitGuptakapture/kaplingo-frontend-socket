@@ -332,7 +332,7 @@ function App() {
     lastSpeechTimeRef.current = null;
     setBufferDuration(0);
 
-    disconnect();
+    // disconnect();
   };
 
   return (
