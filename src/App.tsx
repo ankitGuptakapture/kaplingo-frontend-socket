@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const userId = uuidv4();
 
-const SOCKET_URL = "http://localhost:8080";
+const SOCKET_URL = "http://kaplingo-backend-socket-uh86.onrender.com";
 const ROOM_ID = "fnjnfjnf";
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;
@@ -228,7 +228,7 @@ function App() {
   // emit("audio:silence",{room:ROOM_ID})
   // Start streaming
   const handleRoom = () => {
-    emit("room:join", { room: ROOM_ID, language: selectedLanguage, userId });
+    emit("room:join", { room: ROOM_ID, lang: selectedLanguage, user:userId });
     setIsRoomJoined(true);
   };
   const startStreaming = async () => {
