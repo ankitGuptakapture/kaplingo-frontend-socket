@@ -27,11 +27,10 @@ export const SUPPORTED_LANGUAGES = {
   nl: "Dutch",
   pl: "Polish",
   ru: "Russian",
-  "en":"English"
+  en: "English",
 } as const;
 
 type SupportedLangKey = keyof typeof SUPPORTED_LANGUAGES;
-
 
 function App() {
   const [connected, setConnected] = useState(false);
@@ -258,7 +257,12 @@ function App() {
   // emit("audio:silence",{room:ROOM_ID})
   // Start streaming
   const handleRoom = () => {
-    emit("room:join", { room: ROOM_ID, lang: SUPPORTED_LANGUAGES[selectedLanguage as SupportedLangKey], user: userId,lang_code:selectedLanguage });
+    emit("room:join", {
+      room: ROOM_ID,
+      lang: SUPPORTED_LANGUAGES[selectedLanguage as SupportedLangKey],
+      user: userId,
+      lang_code: selectedLanguage,
+    });
     setIsRoomJoined(true);
   };
   const startStreaming = async () => {
@@ -407,9 +411,7 @@ function App() {
                   <div className="w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-md flex items-center justify-center">
                     <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                   </div>
-                  <span className="text-white text-sm font-medium">
-                    Neural Voice
-                  </span>
+                  <span className="text-white text-sm font-medium">Voice</span>
                 </div>
                 <div className="flex items-center space-x-1">
                   <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse" />
@@ -437,10 +439,10 @@ function App() {
               {/* Title */}
               <div className="text-center">
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-cyan-200 to-blue-300 bg-clip-text text-transparent mb-3 tracking-tight">
-                  Neural Voice
+                  Voice
                 </h1>
                 <p className="text-slate-400 text-sm leading-relaxed">
-                  AI-powered voice interaction with neural processing
+                  AI-powered voice interaction
                 </p>
               </div>
 
@@ -451,9 +453,10 @@ function App() {
                 </label>
                 <div className="relative">
                   <select
+                    value={selectedLanguage}
                     onChange={(e) => {
                       const langCode = e.target.value;
-                      setSelectedLanguage(langCode)
+                      setSelectedLanguage(langCode);
                     }}
                     className="w-full px-4 py-3 bg-slate-800/60 backdrop-blur-sm border border-slate-600/50 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 appearance-none cursor-pointer"
                   >
@@ -537,9 +540,7 @@ function App() {
                     />
                   </svg>
                   <span>
-                    {selectedLanguage
-                      ? "Initialize Neural Link"
-                      : "Select Language First"}
+                    {selectedLanguage ? "Join Room" : "Select Language First"}
                   </span>
                 </span>
               </button>
@@ -551,8 +552,7 @@ function App() {
                 <div className="text-slate-500 text-xs">
                   <div className="flex items-center justify-center space-x-1">
                     <div className="w-1 h-1 bg-slate-500 rounded-full" />
-                    <span>Neural Networks • Standby mode</span>
-                    <div className="w-1 h-1 bg-slate-500 rounded-full" />
+                    <span> Standby mode</span>
                   </div>
                 </div>
               </div>
@@ -611,9 +611,7 @@ function App() {
                 <div className="w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-md flex items-center justify-center">
                   <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                 </div>
-                <span className="text-white text-sm font-medium">
-                  Neural Voice
-                </span>
+                <span className="text-white text-sm font-medium">Voice</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" />
@@ -698,7 +696,7 @@ function App() {
                       </div>
                       <div>
                         <div className="text-cyan-300 font-medium text-sm">
-                          Neural Processing
+                          Voice Processing
                         </div>
                         <div className="text-cyan-200/70 text-xs">
                           Analyzing patterns
@@ -755,7 +753,7 @@ function App() {
               <div className="text-slate-500 text-xs">
                 <div className="flex items-center justify-center space-x-1">
                   <div className="w-1 h-1 bg-slate-500 rounded-full" />
-                  <span>Neural Networks • Real-time processing</span>
+                  <span>Real-time processing</span>
                   <div className="w-1 h-1 bg-slate-500 rounded-full" />
                 </div>
               </div>

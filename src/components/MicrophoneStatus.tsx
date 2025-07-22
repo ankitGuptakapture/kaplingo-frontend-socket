@@ -22,7 +22,7 @@ export function MicrophoneStatus({
   };
 
   const getStatusText = () => {
-    if (isSpeaking) return "Neural Processing";
+    if (isSpeaking) return "Voice Processing";
     if (connected) return "System Active";
     return "Offline";
   };
