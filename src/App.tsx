@@ -86,10 +86,11 @@ function App() {
 
   useEffect(() => {
     window.addEventListener("beforeunload", () => {
+      console.log({ROOM_ID,userId})
       const blob = new Blob([JSON.stringify({ room: ROOM_ID, user: userId })], {
-        type: "application/json",
+        type: "text/plain",
       });
-      navigator.sendBeacon(`${SOCKET_URL}/api/user-left`, blob);
+      window.navigator.sendBeacon(`${SOCKET_URL}/api/user-left`, blob);
     });
   }, []);
 
