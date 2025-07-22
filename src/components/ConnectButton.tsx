@@ -10,10 +10,10 @@ export function ConnectButton({
   onClick,
 }: ConnectButtonProps) {
   const buttonText = connected
-    ? "Terminate Neural Link"
+    ? "Terminate Call"
     : isRoomJoined
-    ? "Activate Neural Interface"
-    : "Initialize Connection";
+    ? "Activate Call"
+    : "Initialize Call";
 
   const getButtonStyles = () => {
     if (!isRoomJoined && !connected) {
