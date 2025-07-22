@@ -452,6 +452,7 @@ function App() {
                 </label>
                 <div className="relative">
                   <select
+                    value={selectedLanguage}
                     onChange={(e) => {
                       const langCode = e.target.value;
                       setSelectedLanguage(langCode);
