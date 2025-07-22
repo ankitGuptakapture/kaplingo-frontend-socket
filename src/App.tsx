@@ -85,7 +85,7 @@ function App() {
 
   useEffect(() => {
     window.addEventListener("beforeunload", () => {
-      console.log({ROOM_ID,userId})
+      console.log({ ROOM_ID, userId });
       const blob = new Blob([JSON.stringify({ room: ROOM_ID, user: userId })], {
         type: "text/plain",
       });
@@ -379,76 +379,138 @@ function App() {
     // Initial state - mobile view with fixed height and original theme
     return (
       <div className="h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 relative overflow-hidden flex items-center justify-center p-4">
-        {/* Neural network background */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(120,119,198,0.1),transparent_50%)]" />
-          {/* Floating AI particles */}
-          {[...Array(30)].map((_, i) => (
+        {/* Enhanced neural network background */}
+        <div className="absolute inset-0 cyber-grid">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(6,182,212,0.15),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(168,85,247,0.12),transparent_50%)]" />
+
+          {/* Enhanced floating AI particles */}
+          {[...Array(40)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1 h-1 bg-cyan-400 rounded-full opacity-30"
+              className={`absolute rounded-full ${
+                i % 4 === 0
+                  ? "bg-cyan-400 w-1.5 h-1.5"
+                  : i % 4 === 1
+                  ? "bg-blue-400 w-1 h-1"
+                  : i % 4 === 2
+                  ? "bg-purple-400 w-2 h-2"
+                  : "bg-pink-400 w-1 h-1"
+              } opacity-40 animate-magnetic-float`}
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                animation: `float ${
-                  3 + Math.random() * 4
-                }s ease-in-out infinite`,
-                animationDelay: `${Math.random() * 2}s`,
+                animationDelay: `${Math.random() * 3}s`,
+                filter: `hue-rotate(${Math.random() * 360}deg)`,
               }}
             />
           ))}
-          {/* Grid pattern */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(120,119,198,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(120,119,198,0.03)_1px,transparent_1px)] bg-[size:50px_50px]" />
+
+          {/* Energy flow lines */}
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={`line-${i}`}
+              className="absolute h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent animate-energy-flow"
+              style={{
+                left: "0%",
+                right: "0%",
+                top: `${10 + i * 12}%`,
+                animationDelay: `${i * 0.5}s`,
+              }}
+            />
+          ))}
         </div>
 
-        {/* Mobile container with fixed height */}
-        <div className="relative z-10 w-full max-w-sm mx-auto">
-          <div className="h-[600px] bg-slate-900/80 backdrop-blur-2xl rounded-3xl border-2 border-slate-700/50 shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
-            {/* Mobile status bar */}
-            <div className="bg-slate-800/80 px-6 py-3 border-b border-slate-700/30 flex-shrink-0">
+        {/* Enhanced Mobile container with increased height */}
+        <div className="relative z-10 w-full max-w-sm mx-auto animate-fade-in-scale">
+          <div className="h-[700px] bg-slate-900/80 backdrop-blur-2xl rounded-3xl border-2 border-slate-700/50 shadow-2xl shadow-black/50 overflow-hidden flex flex-col glass-enhanced neon-border">
+            {/* Enhanced Mobile status bar */}
+            <div className="bg-slate-800/80 px-6 py-3 border-b border-slate-700/30 flex-shrink-0 animate-slide-in-up">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-md flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                  <div className="w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-md flex items-center justify-center animate-quantum-glow">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-neural-pulse" />
                   </div>
-                  <span className="text-white text-sm font-medium">Voice</span>
+                  <span className="text-white text-sm font-medium animate-shimmer">
+                    Voice AI
+                  </span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse" />
-                  <span className="text-slate-400 text-xs">Offline</span>
+                  <div className="w-1 h-1 bg-cyan-400 rounded-full animate-neural-pulse" />
+                  <span className="text-slate-400 text-xs">Initializing</span>
                 </div>
               </div>
             </div>
 
-            {/* Main content - flex-1 to fill remaining space */}
+            {/* Enhanced Main content */}
             <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 space-y-8">
-              {/* AI Logo/Icon */}
-              <div className="relative">
-                <div className="w-20 h-20 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-cyan-500/25">
+              {/* Enhanced AI Logo/Icon */}
+              <div className="relative animate-magnetic-float">
+                {/* Outer glow rings */}
+                <div className="absolute -inset-4 rounded-2xl border border-cyan-400/20 animate-ripple" />
+                <div
+                  className="absolute -inset-6 rounded-2xl border border-blue-400/15 animate-ripple"
+                  style={{ animationDelay: "0.5s" }}
+                />
+                <div
+                  className="absolute -inset-8 rounded-2xl border border-purple-400/10 animate-ripple"
+                  style={{ animationDelay: "1s" }}
+                />
+
+                <div className="w-24 h-24 bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-cyan-500/30 animate-quantum-glow">
                   <svg
-                    className="w-10 h-10 text-white"
+                    className="w-12 h-12 text-white animate-neural-pulse"
                     fill="currentColor"
                     viewBox="0 0 24 24"
                   >
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                   </svg>
+
+                  {/* Holographic overlay */}
+                  <div className="absolute inset-0 rounded-2xl holographic opacity-30" />
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl animate-ping opacity-20" />
+
+                {/* Energy particles around logo */}
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute w-1 h-1 bg-cyan-400 rounded-full animate-magnetic-float opacity-60"
+                    style={{
+                      left: `${20 + i * 12}%`,
+                      top: `${25 + Math.sin(i * 2) * 25}%`,
+                      animationDelay: `${i * 0.3}s`,
+                    }}
+                  />
+                ))}
               </div>
 
-              {/* Title */}
-              <div className="text-center">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-cyan-200 to-blue-300 bg-clip-text text-transparent mb-3 tracking-tight">
-                  Voice
+              {/* Enhanced Title */}
+              <div className="text-center animate-slide-in-up">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-cyan-200 to-blue-300 bg-clip-text text-transparent mb-3 tracking-tight animate-shimmer">
+                  Voice AI
                 </h1>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  AI-powered voice interaction
+                <p className="text-slate-400 text-sm leading-relaxed animate-breathe">
+                  Ai-powered voice interaction
                 </p>
+
+                {/* Status indicator bars */}
+                <div className="flex justify-center space-x-1 mt-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-gradient-to-t from-cyan-400 to-blue-500 rounded-full animate-wave opacity-60"
+                      style={{
+                        height: `${6 + Math.sin(i) * 4}px`,
+                        animationDelay: `${i * 0.2}s`,
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* Language Selection Dropdown */}
-              <div className="w-full space-y-2">
-                <label className="block text-slate-300 text-sm font-medium mb-2">
+              {/* Enhanced Language Selection */}
+              <div className="w-full space-y-2 animate-fade-in-scale">
+                <label className="block text-slate-300 text-sm font-medium mb-2 animate-shimmer">
                   Select Language
                 </label>
                 <div className="relative">
@@ -458,7 +520,7 @@ function App() {
                       const langCode = e.target.value;
                       setSelectedLanguage(langCode);
                     }}
-                    className="w-full px-4 py-3 bg-slate-800/60 backdrop-blur-sm border border-slate-600/50 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 appearance-none cursor-pointer"
+                    className="w-full px-4 py-3 bg-slate-800/60 backdrop-blur-sm border border-slate-600/50 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-500 appearance-none cursor-pointer glass-enhanced hover:bg-slate-800/80 magnetic-hover"
                   >
                     {Object.entries(SUPPORTED_LANGUAGES).map(
                       ([langCode, label]) => (
@@ -472,10 +534,11 @@ function App() {
                       )
                     )}
                   </select>
-                  {/* Custom dropdown arrow */}
+
+                  {/* Enhanced dropdown arrow */}
                   <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                     <svg
-                      className="w-4 h-4 text-slate-400"
+                      className="w-4 h-4 text-slate-400 animate-breathe"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -488,71 +551,98 @@ function App() {
                       />
                     </svg>
                   </div>
+
+                  {/* Shimmer effect overlay */}
+                  <div className="absolute inset-0 rounded-xl animate-shimmer opacity-20 pointer-events-none" />
                 </div>
-                {/* Selected language display */}
+
+                {/* Enhanced language confirmation */}
                 {selectedLanguage && (
-                  <div className="text-xs text-cyan-400 mt-1 flex items-center space-x-1">
-                    <svg
-                      className="w-3 h-3"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span>
-                      Language selected:{" "}
-                      {selectedLanguage.charAt(0).toUpperCase() +
-                        selectedLanguage.slice(1)}
+                  <div className="text-xs text-cyan-400 mt-2 flex items-center space-x-2 animate-slide-in-up">
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-neural-pulse" />
+                    <span className="animate-shimmer">
+                      Selected language:{" "}
+                      {
+                        SUPPORTED_LANGUAGES[
+                          selectedLanguage as SupportedLangKey
+                        ]
+                      }
                     </span>
                   </div>
                 )}
               </div>
 
-              {/* Join button - disabled until language is selected */}
-              <button
-                onClick={handleRoom}
-                disabled={!selectedLanguage}
-                className={`group relative w-full px-8 py-4 rounded-xl font-semibold text-white shadow-2xl transition-all duration-500 transform ${
-                  selectedLanguage
-                    ? "bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 cursor-pointer"
-                    : "bg-slate-700 shadow-slate-700/25 cursor-not-allowed opacity-50"
-                }`}
-              >
-                {selectedLanguage && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                )}
-                <span className="relative flex items-center justify-center space-x-2">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
-                  <span>
-                    {selectedLanguage ? "Join Room" : "Select Language First"}
+              {/* Enhanced Join button */}
+              <div className="w-full animate-fade-in-scale">
+                <button
+                  onClick={handleRoom}
+                  disabled={!selectedLanguage}
+                  className={`group relative w-full px-8 py-4 rounded-xl font-bold text-white shadow-2xl transition-all duration-700 transform magnetic-hover glass-enhanced ${
+                    selectedLanguage
+                      ? "bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-110 cursor-pointer animate-glow neon-border"
+                      : "bg-slate-700 shadow-slate-700/25 cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  {/* Enhanced background effects */}
+                  {selectedLanguage && (
+                    <>
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <div className="absolute inset-0 rounded-xl holographic opacity-20" />
+                      <div className="absolute inset-0 rounded-xl animate-shimmer opacity-30" />
+                    </>
+                  )}
+
+                  <span className="relative flex items-center justify-center space-x-3">
+                    <svg
+                      className={`w-6 h-6 ${
+                        selectedLanguage ? "animate-neural-pulse" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                    <span
+                      className={`tracking-wide ${
+                        selectedLanguage ? "animate-shimmer" : ""
+                      }`}
+                    >
+                      {selectedLanguage ? "Join Room" : "Select Language First"}
+                    </span>
+
+                    {/* Energy particles for active state */}
+                    {selectedLanguage && (
+                      <div className="flex space-x-1">
+                        {[...Array(3)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-2 h-2 bg-cyan-400 rounded-full animate-magnetic-float opacity-70"
+                            style={{
+                              animationDelay: `${i * 0.3}s`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </span>
-                </span>
-              </button>
+                </button>
+              </div>
             </div>
 
-            {/* Footer */}
-            <div className="bg-slate-800/60 px-6 py-3 border-t border-slate-700/30 flex-shrink-0">
+            {/* Enhanced Footer */}
+            <div className="bg-slate-800/60 px-6 py-3 border-t border-slate-700/30 flex-shrink-0 animate-slide-in-up">
               <div className="text-center">
                 <div className="text-slate-500 text-xs">
-                  <div className="flex items-center justify-center space-x-1">
-                    <div className="w-1 h-1 bg-slate-500 rounded-full" />
-                    <span> Standby mode</span>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-1 h-1 bg-slate-500 rounded-full animate-neural-pulse" />
+                    <span className="animate-breathe">Neural standby mode</span>
+                    <div className="w-1 h-1 bg-slate-500 rounded-full animate-neural-pulse" />
                   </div>
                 </div>
               </div>
@@ -601,9 +691,9 @@ function App() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(168,85,247,0.08),transparent_50%)]" />
       </div>
 
-      {/* Mobile container with fixed height */}
+      {/* Mobile container with increased height */}
       <div className="relative z-10 w-full max-w-sm mx-auto">
-        <div className="h-[600px] bg-slate-900/80 backdrop-blur-2xl rounded-3xl border-2 border-slate-700/50 shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+        <div className="h-[700px] bg-slate-900/80 backdrop-blur-2xl rounded-3xl border-2 border-slate-700/50 shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
           {/* Mobile status bar */}
           <div className="bg-slate-800/80 px-6 py-3 border-b border-slate-700/30 flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -627,49 +717,67 @@ function App() {
               <MicrophoneStatus connected={connected} isSpeaking={isSpeaking} />
             </div>
 
-            {/* Static/Animated Waveform Visualization */}
-            <div className="w-full h-16 flex items-center justify-center bg-slate-800/40 rounded-2xl backdrop-blur-sm border border-slate-700/30 px-4">
-              <div className="w-full h-10 flex items-center justify-center relative overflow-hidden">
-                {/* Static waveform when not speaking */}
+            {/* Enhanced Waveform Visualization */}
+            <div className="w-full h-20 flex items-center justify-center bg-slate-800/40 rounded-2xl backdrop-blur-sm border border-slate-700/30 px-4 glass-enhanced">
+              <div className="w-full h-14 flex items-center justify-center relative overflow-hidden">
+                {/* Enhanced waveform bars */}
                 <div className="flex items-center space-x-1 w-full justify-center">
-                  {[...Array(45)].map((_, i) => {
+                  {[...Array(50)].map((_, i) => {
                     const staticHeight =
-                      4 + Math.sin(i * 0.4) * 8 + Math.cos(i * 0.2) * 6;
+                      6 + Math.sin(i * 0.3) * 10 + Math.cos(i * 0.15) * 8;
                     const animatedHeight = isSpeaking
-                      ? 4 +
-                        Math.sin(i * 0.3 + Date.now() * 0.01) * 15 +
-                        Math.random() * 12
+                      ? 6 +
+                        Math.sin(i * 0.25 + Date.now() * 0.008) * 20 +
+                        Math.random() * 16
                       : staticHeight;
 
                     return (
                       <div
                         key={i}
-                        className={`rounded-full transition-all duration-300 ${
+                        className={`rounded-full transition-all duration-500 relative ${
                           isSpeaking
-                            ? "bg-gradient-to-t from-cyan-500 via-blue-400 to-purple-400 opacity-80"
-                            : "bg-gradient-to-t from-slate-600 to-slate-500 opacity-60"
+                            ? "bg-gradient-to-t from-cyan-500 via-blue-400 to-purple-400 opacity-90 animate-quantum-glow"
+                            : "bg-gradient-to-t from-slate-600 to-slate-500 opacity-50 animate-breathe"
                         }`}
                         style={{
-                          width: "2px",
-                          height: `${Math.max(4, animatedHeight)}px`,
+                          width: "2.5px",
+                          height: `${Math.max(6, animatedHeight)}px`,
                           animation: isSpeaking
                             ? `wave ${
-                                0.4 + Math.random() * 0.3
+                                0.3 + Math.random() * 0.4
                               }s ease-in-out infinite`
+                            : connected
+                            ? "breathe 3s ease-in-out infinite"
                             : "none",
-                          animationDelay: `${i * 0.02}s`,
+                          animationDelay: `${i * 0.015}s`,
+                          filter: isSpeaking
+                            ? `hue-rotate(${i * 7}deg)`
+                            : "none",
                         }}
                       />
                     );
                   })}
                 </div>
 
-                {/* Moving gradient overlay only when speaking */}
+                {/* Enhanced moving gradient overlays */}
                 {isSpeaking && (
-                  <div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent"
-                    style={{ animation: "slideWave 2s ease-in-out infinite" }}
-                  />
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent animate-energy-flow" />
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-400/20 to-transparent animate-energy-flow"
+                      style={{ animationDelay: "1s" }}
+                    />
+                  </>
+                )}
+
+                {/* Holographic overlay when speaking */}
+                {isSpeaking && (
+                  <div className="absolute inset-0 holographic opacity-20 rounded-xl" />
+                )}
+
+                {/* Neural network pattern overlay */}
+                {connected && (
+                  <div className="absolute inset-0 cyber-grid opacity-10 rounded-xl" />
                 )}
               </div>
             </div>
